@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  mcp-server:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - MCP_SERVER_PORT=3000
+      - MCP_SERVER_TOKEN=${MCP_SERVER_TOKEN}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+      - AZURE_SUBSCRIPTION_ID=${AZURE_SUBSCRIPTION_ID}
+      - AZURE_CLIENT_ID=${AZURE_CLIENT_ID}
+      - AZURE_CLIENT_SECRET=${AZURE_CLIENT_SECRET}
+      - AZURE_TENANT_ID=${AZURE_TENANT_ID}
+      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL}
+      - PAGERDUTY_ROUTING_KEY=${PAGERDUTY_ROUTING_KEY}
+    volumes:
+      - ./logs:/app/logs
+      - ${KUBECONFIG_PATH:-~/.kube/config}:/app/.kube/config:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Optional: Add a reverse proxy
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - mcp-server
+    restart: unless-stopped
+
+volumes:
+  logs:
